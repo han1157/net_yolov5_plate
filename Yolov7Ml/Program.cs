@@ -2,6 +2,7 @@
 using OpenCvSharp.Extensions;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Xml.Linq;
 using Yolov7net;
 
 namespace Yolov7Ml
@@ -27,7 +28,7 @@ namespace Yolov7Ml
 
             yoloOcr.SetupYoloDefaultLabels(); // use custom trained model should use your labels like: yolo.SetupLabels(string[] labels)
 
-         
+
 
 
             foreach (var item in dirPos)
@@ -36,7 +37,7 @@ namespace Yolov7Ml
                     Path.GetExtension(item).Equals(".png") ||
                     Path.GetExtension(item).Equals(".jpeg"))
                 {
-                    using var image = System.Drawing.Image.FromFile(item);
+                    using var image = Image.FromFile(item);
                     var predictions = yolo.Predict(image);
 
                     if (predictions.Count < 1) continue;
@@ -51,18 +52,16 @@ namespace Yolov7Ml
 
                         double score = Math.Round(prediction.Score, 2);
                         var labelRect = prediction.Rectangle;
-                        var twoLayers = (labelRect.Height / labelRect.Width) > 0.5;
+                        var twoLayers = (labelRect.Height / labelRect.Width) > 0.51;//双层车牌号码
 
                         //定义截取矩形
-                        System.Drawing.Rectangle cropArea = new System.Drawing.Rectangle((int)labelRect.X < 0 ? 0 : (int)labelRect.X, (int)labelRect.Y < 0 ? 0 : (int)labelRect.Y, (int)labelRect.Width, (int)labelRect.Height);
+                        System.Drawing.Rectangle cropArea = new Rectangle((int)labelRect.X < 0 ? 0 : (int)labelRect.X, (int)labelRect.Y < 0 ? 0 : (int)labelRect.Y, (int)labelRect.Width, (int)labelRect.Height);
                         //定义Bitmap对象
-                        System.Drawing.Bitmap bmpImage = new System.Drawing.Bitmap(image);
+                        System.Drawing.Bitmap bmpImage = new Bitmap(image);
                         //进行裁剪
                         System.Drawing.Bitmap bmpCrop = bmpImage.Clone(cropArea, bmpImage.PixelFormat);
                         //保存成新文件
                         // bmpCrop.Save(Path.Combine(path, (fileName + "_" + dtNow + "_clone.png")), ImageFormat.Png);
-
-                    
 
                         if (twoLayers)
                         {
@@ -75,23 +74,27 @@ namespace Yolov7Ml
                             {
                                 Rectangle resultRectangle = new Rectangle(0, 0, width, height);
                                 Rectangle sourceRectangle = new Rectangle(0, 0, width, height);
+                                //从车牌bmpCrop 的坐标 sourceRectangle 获取图像,画到resultBitmap 的 resultRectangle位置 ,单位像素
                                 g.DrawImage(bmpCrop, resultRectangle, sourceRectangle, GraphicsUnit.Pixel);
                             }
+
+                            // resultBitmap.Save(Path.Combine(path, $"aaa.png"), ImageFormat.Png);
+
 
                             Bitmap resultBitmap1 = new Bitmap(width, height);
                             using (Graphics g = Graphics.FromImage(resultBitmap1))
                             {
                                 Rectangle resultRectangle = new Rectangle(0, 0, width, height);
-                                Rectangle sourceRectangle = new Rectangle(0, height, width, height);
+                                Rectangle sourceRectangle = new Rectangle(0, (int)(labelRect.Height /2.5), width, height);
                                 g.DrawImage(bmpCrop, resultRectangle, sourceRectangle, GraphicsUnit.Pixel);
                             }
-
+                            // resultBitmap1.Save(Path.Combine(path, $"aaa1.png"), ImageFormat.Png);
                             bmpCrop = JoinImage(resultBitmap, resultBitmap1);
 
 
                         }
                         //保存成新文件
-                        bmpCrop.Save(Path.Combine(path, (fileName + "_" + dtNow + num + "_clone.png")), ImageFormat.Png);
+                        bmpCrop.Save(Path.Combine(path, $"{fileName}_{dtNow}{num}_clone.png"), ImageFormat.Png);
 
                         var backtxt = "";
                         //using (MemoryStream stream = new MemoryStream())
@@ -121,7 +124,7 @@ namespace Yolov7Ml
                     }
 
 
-                    image.Save(Path.Combine(path, (fileName + "_" + dtNow + ".png")), ImageFormat.Png);
+                    image.Save(Path.Combine(path, $"{fileName}_{dtNow}.png"), ImageFormat.Png);
                 }
             }
 
